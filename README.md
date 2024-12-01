@@ -263,7 +263,7 @@ public record PostalCode
 public class Address
 {
     public Street Street { get; }
-    public string City { get; }
+    public City City { get; }
     public PostalCode PostalCode { get; }
     public Option<string> BuildingNumber { get; }
     public Option<string> Country { get; }
@@ -355,14 +355,14 @@ var address1Result = Address.Create("123 Main St", "Springfield", "12345");
 var address2Result = Address.Create("456 Oak Rd", "Boston", "67890");
 
 // None of these invalid operations are possible! 🎉
-// address1.Street = address2.City;        // Error: Property 'Street' is read-only AND type mismatch (Street vs string)
+// address1.Street = address2.City;        // Error: Property 'Street' is read-only AND type mismatch (Street vs City)
 // address1.PostalCode = "invalid!";       // Error: Property 'PostalCode' is read-only AND type mismatch (PostalCode vs string)
 // address1.Street = new Street("test");   // Error: Constructor Street is inaccessible
 // address1.BuildingNumber = "123";        // Error: Property is read-only Option<string>
 
 // The compiler catches type mismatches immediately:
 // address1.Street = address2.PostalCode;  // Error: Cannot convert PostalCode to Street
-// address1.City = address2.Street;        // Error: Cannot convert Street to string
+// address1.City = address2.Street;        // Error: Cannot convert Street to City
 
 // Type safety ensures you can't mix different value types:
 Street street = new Street("Main St");     // Error: Constructor is inaccessible
