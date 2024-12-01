@@ -347,6 +347,7 @@ var formattedAddress = addressResult.Match(
             none: string.Empty)}",
     failure: error => $"Invalid address: {error}"
 );
+```
 
 The type-safe implementation prevents invalid operations at compile time:
 ```csharp
