@@ -4,16 +4,20 @@ namespace OptionType.Sample.Tests;
 
 public class OrderProcessingTests
 {
-    private static Customer CreateCustomer(bool includeCountry = false, Option<string>? email = null, bool includeNumber = true)
+    private static Customer CreateCustomer(bool includeNumber = true, bool includeCountry = true, Option<string>? email = null)
     {
-        var address = new Address(
+        var addressResult = Address.Create(
             "123 Main St",
             "Springfield",
             "12345",
             includeNumber ? Option<string>.Some("4B") : Option<string>.None(),
             includeCountry ? Option<string>.Some("USA") : Option<string>.None()
         );
-        return new Customer(1, "John Doe", Option<Address>.Some(address), email ?? Option<string>.None());
+
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
+        return new Customer(1, "John Doe", Option<Address>.Some(addressResult.Value), email ?? Option<string>.None());
     }
 
     private static Discount CreateDiscount(decimal percentage = 20m, 
@@ -27,7 +31,11 @@ public class OrderProcessingTests
             endDate ?? Option<DateTime>.None(),
             dayOfWeek ?? Option<DayOfWeek>.None()
         );
-        return result.Unwrap(() => throw new InvalidOperationException($"Failed to create discount: {result.GetError()}"));
+        
+        Assert.True(result.IsSuccess, $"Discount creation failed: {result.GetError()}");
+        Assert.NotNull(result.Value);
+        
+        return result.Value;
     }
 
     [Fact]
@@ -264,15 +272,18 @@ public class OrderProcessingTests
     [Fact]
     public void Customer_WithInvalidEmail_HandlesGracefully()
     {
-        var address = new Address(
+        var addressResult = Address.Create(
             "123 Main St",
             "Springfield",
             "12345",
             Option<string>.Some("USA"),
             Option<string>.Some("USA")
         );
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
         var customer = new Customer(1, "John Doe", 
-            Option<Address>.Some(address), 
+            Option<Address>.Some(addressResult.Value), 
             Option<string>.Some("invalid-email"));
 
         var result = customer.GetEmailConfirmation();
@@ -284,8 +295,17 @@ public class OrderProcessingTests
     public void Address_WithLongStreetName_FormatsCorrectly()
     {
         var longStreet = "12345 Very Long Street Name That Could Potentially Cause Formatting Issues";
-        var address = new Address(longStreet, "Springfield", "12345", Option<string>.Some("4B"), Option<string>.None());
-        var customer = new Customer(1, "John Doe", Option<Address>.Some(address), Option<string>.None());
+        var addressResult = Address.Create(
+            longStreet,
+            "Springfield",
+            "12345",
+            Option<string>.Some("4B"),
+            Option<string>.None()
+        );
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
+        var customer = new Customer(1, "John Doe", Option<Address>.Some(addressResult.Value), Option<string>.None());
 
         var label = customer.GetShippingLabel().Unwrap(() => "");
 
@@ -296,8 +316,18 @@ public class OrderProcessingTests
     [Fact]
     public void ChainedOptions_HandleNoneGracefully()
     {
+        var addressResult = Address.Create(
+            "123 Main St",
+            "Springfield",
+            "12345",
+            Option<string>.None(),
+            Option<string>.None()
+        );
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
         var customer = new Customer(1, "John Doe", 
-            Option<Address>.Some(new Address("123 Main St", "Springfield", "12345", Option<string>.None(), Option<string>.None())), 
+            Option<Address>.Some(addressResult.Value), 
             Option<string>.None());
 
         var result = customer.Email
@@ -313,8 +343,18 @@ public class OrderProcessingTests
     public void Customer_WithNullEmail_HandlesGracefully()
     {
         string? nullEmail = null;
+        var addressResult = Address.Create(
+            "123 Main St",
+            "Springfield",
+            "12345",
+            Option<string>.Some("4B"),
+            Option<string>.Some("USA")
+        );
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
         var customer = new Customer(1, "John Doe", 
-            Option<Address>.Some(new Address("123 Main St", "Springfield", "12345", Option<string>.None(), Option<string>.None())), 
+            Option<Address>.Some(addressResult.Value), 
             Option<string>.Some(nullEmail!));
 
         var emailConfirmation = customer.GetEmailConfirmation();
@@ -325,8 +365,17 @@ public class OrderProcessingTests
     [Fact]
     public void Address_WithSpecialCharacters_FormatsCorrectly()
     {
-        var address = new Address("123 Main St. #&@", "Spring-Field", "12345-6789", Option<string>.Some("4B!"), Option<string>.None());
-        var customer = new Customer(1, "John & Jane Doe", Option<Address>.Some(address), Option<string>.None());
+        var addressResult = Address.Create(
+            "123 Main St. #&@",
+            "Spring-Field",
+            "12345-6789",
+            Option<string>.Some("4B!"),
+            Option<string>.None()
+        );
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
+        var customer = new Customer(1, "John & Jane Doe", Option<Address>.Some(addressResult.Value), Option<string>.None());
 
         var label = customer.GetShippingLabel().Unwrap(() => "");
 
@@ -356,13 +405,18 @@ public class OrderProcessingTests
     [Fact]
     public void ComplexOptionChain_WithSomeNone_ShortCircuits()
     {
+        var addressResult = Address.Create(
+            "123 Main St",
+            "Springfield",
+            "12345",
+            Option<string>.None(),
+            Option<string>.None()
+        );
+        Assert.True(addressResult.IsSuccess, $"Address creation failed: {addressResult.GetError()}");
+        Assert.NotNull(addressResult.Value);
+        
         var customer = new Customer(1, "John Doe", 
-            Option<Address>.Some(new Address(
-                "123 Main St", 
-                "Springfield", 
-                "12345", 
-                Option<string>.None(), 
-                Option<string>.None())), 
+            Option<Address>.Some(addressResult.Value), 
             Option<string>.None());
         var discount = CreateDiscount();
         var order = new Order(1, customer, 100m, Option<Discount>.Some(discount));
@@ -450,5 +504,73 @@ public class OrderProcessingTests
         Assert.Equal(percentage, result.Match(
             success: d => d.Percentage,
             failure: _ => 0));
+    }
+
+    [Fact]
+    public void Address_WithValidData_ShouldCreateSuccessfully()
+    {
+        var result = Address.Create(
+            "123 Main St",
+            "Springfield",
+            "12345",
+            Option<string>.Some("4B"),
+            Option<string>.Some("USA")
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("123 Main St", result.Value!.Street.Value);
+        Assert.Equal("Springfield", result.Value.City.Value);
+        Assert.Equal("12345", result.Value.PostalCode.Value);
+        Assert.Equal("4B", result.Value.Number.Map(n => n.Value).Unwrap(() => ""));
+        Assert.Equal("USA", result.Value.Country.Map(c => c.Value).Unwrap(() => ""));
+    }
+
+    [Theory]
+    [InlineData("", "City", "12345", "Invalid street")]
+    [InlineData("Street", "", "12345", "Invalid city")]
+    [InlineData("Street", "City", "", "Invalid postal code")]
+    [InlineData("Street", "City", "ABC123!@#", "Invalid postal code")]
+    public void Address_WithInvalidData_ShouldReturnError(string street, string city, string postalCode, string expectedError)
+    {
+        var result = Address.Create(
+            street,
+            city,
+            postalCode,
+            Option<string>.None(),
+            Option<string>.None()
+        );
+
+        Assert.True(result.IsError);
+        Assert.Contains(expectedError, result.GetError());
+    }
+
+    [Fact]
+    public void Address_WithInvalidBuildingNumber_ShouldReturnError()
+    {
+        var result = Address.Create(
+            "123 Main St",
+            "Springfield",
+            "12345",
+            Option<string>.Some(""), // Invalid building number
+            Option<string>.None()
+        );
+
+        Assert.True(result.IsError);
+        Assert.Contains("Invalid building number", result.GetError());
+    }
+
+    [Fact]
+    public void Address_WithInvalidCountry_ShouldReturnError()
+    {
+        var result = Address.Create(
+            "123 Main St",
+            "Springfield",
+            "12345",
+            Option<string>.None(),
+            Option<string>.Some("123") // Invalid country (contains numbers)
+        );
+
+        Assert.True(result.IsError);
+        Assert.Contains("Invalid country", result.GetError());
     }
 }

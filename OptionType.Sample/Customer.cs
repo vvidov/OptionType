@@ -26,14 +26,17 @@ public class Customer
     private static bool IsValidEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email)) return false;
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
+        
+        return Option<string>.Some(email)
+            .Bind(e => {
+                var parts = e.Split('@');
+                return parts.Length == 2 && 
+                       !string.IsNullOrWhiteSpace(parts[0]) && 
+                       !string.IsNullOrWhiteSpace(parts[1]) &&
+                       parts[1].Contains('.')
+                    ? Option<string>.Some(e)
+                    : Option<string>.None();
+            })
+            .IsSome;
     }
 }

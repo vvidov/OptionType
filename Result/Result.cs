@@ -26,7 +26,8 @@ public class Result<T>
     public static Result<T> Error(string error) => new(error);
 
     public string? GetError() => _error;
-
+    public T? Value => _value!;
+    
     public T Unwrap(T defaultValue) => IsSuccess ? _value! : defaultValue;
 
     public T Unwrap(Func<T> defaultValueProvider) => 

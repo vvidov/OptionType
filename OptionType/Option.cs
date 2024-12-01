@@ -28,7 +28,7 @@ public class Option<T>
     public Option<TResult> Bind<TResult>(Func<T, Option<TResult>> binder) =>
         _hasValue ? binder(_value!) : Option<TResult>.None();
 
-    public T Match(Func<T, T> some, Func<T> none) =>
+    public TResult Match<TResult>(Func<T, TResult> some, Func<TResult> none) =>
         _hasValue ? some(_value!) : none();
 
     public override string ToString() =>
